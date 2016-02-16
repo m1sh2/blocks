@@ -1,6 +1,5 @@
 'use strict';
 
-var map = $('#map');
 var score = $('#score');
 var scoreNum = 0;
 var fa = [];
@@ -9,74 +8,294 @@ var yStart = 0;
 var step = 20;
 var el;
 var elId = 0;
-var speed = 1000;
 var speedDefault = speed;
-var t;
 var sound = 1;
 var pause = 0;
 var next = Rand(1,7);
 
-KeyUp();
 
-$(document).ready(function(){
-  NewEl();
-  Next();
-  Go();
-  $('button').click(function(){
-    switch($(this).attr('act')){
-      case 'restart':{
-        clearTimeout(t);
-        speed = speedDefault;
-        $('#map').html('');
-        $('#finishmessage').hide();
-        NewEl();
-        Go();
-        break;
+
+
+var t;
+var map = $('#map');
+var area = $('#area')[0];
+var ctx = area.getContext("2d");
+var speed = 500;
+var conf = {
+  w: 20,
+  h: 20
+};
+var items = [];
+var itemsCoords = [];
+var w = 20;
+var h = 20;
+var wa = area.width;
+var ha = area.height;
+// var blocks = {
+//   rect: {
+//     item: (function() {
+//       var color = 'rgba(0, 0, 200, 0.5)';
+      
+//       return item;
+
+//       // return items;
+//       // ctx.fillStyle = item.color;
+//       // ctx.fillRect (item.x, item.y, item.w, item.h);
+//       // ctx.fillStyle = item.color;
+//       // ctx.fillRect (item.x, item.y, item.w, item.h);
+//       // ctx.fillStyle = item.color;
+//       // ctx.fillRect (item.x, item.y, item.w, item.h);
+//       // ctx.fillStyle = item.color;
+//       // ctx.fillRect (item.x, item.y, item.w, item.h);
+
+//       // ctx.beginPath();
+//       // ctx.lineWidth = 0.1;
+//       // ctx.moveTo(item.x, item.y);
+//       // ctx.lineTo(item.x + w, item.y);
+//       // ctx.lineTo(item.x + w, item.y + h);
+//       // ctx.lineTo(item.x, item.y + h);
+//       // ctx.lineTo(item.x, item.y);
+//       // ctx.stroke();
+//     })(),
+//     coords: (function(argument) {
+      
+//     })()
+// };
+
+function Item(type) {
+  this.params = (function() {
+    var params = {
+      rect: {
+        color: 'rgba(0, 0, 200, 0.5)',
+        state: 'new'
       }
-      case 'sound':{
-        sound = sound==0?1:0;
-        if(sound==0){
-          $('#control button[act="sound"]').addClass('mute');
+    };
+    return params[type];
+  })();
+  this.coords = (function() {
+    // var item = [];
+    var x = 100;
+    var y = 0;
+    var w = conf.w;
+    var h = conf.h;
+    // console.info(items, this.items);
+    var coords = {
+      rect: [
+        {
+          x: x - w,
+          y: y
+        },
+        {
+          x: x,
+          y: y
+        },
+        {
+          x: x - w,
+          y: y + h
+        },
+        {
+          x: x,
+          y: y + h
         }
-        else{
-          $('#control button[act="sound"]').removeClass('mute');
-        }
-        break;
+      ]
+    };
+    
+    
+    return coords[type];
+  })();
+}
+
+
+
+
+
+items.push(new Item('rect'));
+// itemsCoords.push(blocks['rect'].coords);
+
+// var x = 0,
+//   y = 0,
+//   w = 20,
+//   h = 20;
+// for (var i = 0; i < 25; i++) {
+  
+//   items.push({
+//     type: 'rect'
+//   });
+
+//   if (x >= 180) {
+//     x = 0;
+//     y += 20;
+//   } else {
+//     x += 20;
+//   }
+// }
+
+// KeyUp();
+
+function Update() {
+  var w = conf.w;
+  var h = conf.h;
+  var newItem = false;
+  for (var i = 0; i < items.length; i++) {
+    console.info(newItem, items[i].params.state);
+    if (items[i].coords[0].y + h * 2 < ha && items[i].params.state === 'new') {
+      // item[0].y += h * 2;
+      for (var j = 0; j < items[i].coords.length; j++) {
+        var item = items[i].coords[j];
+        item.y += h;
       }
-      case 'pause':{
-        pause = pause==0?1:0;
-        if(pause==1){
-          clearTimeout(t);
-          $('#pausemessage').show();
-          $(document).unbind('keyup');
-        }
-        else{
-          $('#pausemessage').hide();
-          KeyUp();
-          speed = speedDefault;
-          Go();
-        }
-        break;
-      }
-      case 'left':{
-        Left();
-        break;
-      }
-      case 'right':{
-        Right();
-        break;
-      }
-      case 'up':{
-        Rotate();
-        break;
-      }
-      case 'down':{
-        Down();
-        break;
+    } else if (items[i].coords[0].y + h * 2 >= ha && items[i].params.state === 'new') {
+      newItem = true;
+      items[i].params.state = 'old';
+    }
+  }
+  if (newItem) {
+    
+    items.push(new Item('rect'));
+    newItem = false;
+  }
+  // console.info(newItem);
+}
+
+function Draw(move) {
+  var w = conf.w;
+  var h = conf.h;
+  // console.info(move);
+  if (move) {
+    Update();
+  }
+
+  // if (area.getContext) {
+    // var x = 0,
+    //   y = 0,
+    //   w = 20,
+    //   h = 20;
+    // for (var i = 0; i < 25; i++) {
+      
+    //   items.push({
+    //     type: 'rect',
+    //     x: x,
+    //     y: y,
+    //     w: w,
+    //     h: h,
+    //     color: 'rgba(0, 0, 200, 0.5)'
+    //   });
+
+    //   if (x >= 180) {
+    //     x = 0;
+    //     y += 20;
+    //   } else {
+    //     x += 20;
+    //   }
+    // }
+    
+    // var ctx = area.getContext("2d");
+
+    ctx.clearRect(0, 0, area.width, area.height);
+    
+    for (var i = 0; i < items.length; i++) {
+      
+      for (var j = 0; j < items[i].coords.length; j++) {
+        var coords = items[i].coords[j];
+        var params = items[i].params;
+        var x = coords.x;
+        var y = coords.y;
+        // var item = blocks[items[i].type].get();
+        // console.info(item, x, y, w, h);
+        // blocks[item.type].draw(item.x, item.y, item.w, item.h);
+        ctx.fillStyle = params.color;
+        ctx.fillRect (x, y, w, h);
+
+        ctx.beginPath();
+        ctx.lineWidth = 0.1;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w, y);
+        ctx.lineTo(x + w, y + h);
+        ctx.lineTo(x, y + h);
+        ctx.lineTo(x, y);
+        ctx.stroke();
       }
     }
+  // }
+}
+
+function Go() {
+  clearTimeout(t);
+  // Draw(true);
+  t = setTimeout(function() {
+    Draw(true);
+    Go();
+  }, speed);
+}
+
+$(document).ready(function(){
+  // var canvas = document.getElementById("canvas");
+  // if (canvas.getContext) {
+  //   var ctx = canvas.getContext("2d");
+
+  
+
     
-  });
+  // }
+  // NewEl();
+  // Next();
+  Draw();
+  Go();
+  // $('button').click(function(){
+  //   switch($(this).attr('act')){
+  //     case 'restart':{
+  //       clearTimeout(t);
+  //       speed = speedDefault;
+  //       $('#map').html('');
+  //       $('#finishmessage').hide();
+  //       NewEl();
+  //       Go();
+  //       break;
+  //     }
+  //     case 'sound':{
+  //       sound = sound==0?1:0;
+  //       if(sound==0){
+  //         $('#control button[act="sound"]').addClass('mute');
+  //       }
+  //       else{
+  //         $('#control button[act="sound"]').removeClass('mute');
+  //       }
+  //       break;
+  //     }
+  //     case 'pause':{
+  //       pause = pause==0?1:0;
+  //       if(pause==1){
+  //         clearTimeout(t);
+  //         $('#pausemessage').show();
+  //         $(document).unbind('keyup');
+  //       }
+  //       else{
+  //         $('#pausemessage').hide();
+  //         KeyUp();
+  //         speed = speedDefault;
+  //         Go();
+  //       }
+  //       break;
+  //     }
+  //     case 'left':{
+  //       Left();
+  //       break;
+  //     }
+  //     case 'right':{
+  //       Right();
+  //       break;
+  //     }
+  //     case 'up':{
+  //       Rotate();
+  //       break;
+  //     }
+  //     case 'down':{
+  //       Down();
+  //       break;
+  //     }
+  //   }
+    
+  // });
 });
 
 function KeyUp(){
@@ -728,7 +947,7 @@ function Down(){
   Go();
 }
 
-function Go(){
+function Go1(){
   if(Finish()){
     Sound('finish');
     $('#finishmessage').show();
