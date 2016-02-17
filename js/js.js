@@ -8,29 +8,34 @@ var yStart = 0;
 var step = 20;
 var el;
 var elId = 0;
-var speedDefault = speed;
 var sound = 1;
 var pause = 0;
 var next = Rand(1,7);
 
 
 
-
+var grid = {};
 var t;
 var map = $('#map');
+var debugItems = $('#debug #items');
+var debugXY = $('#debug #xy');
 var area = $('#area')[0];
 var ctx = area.getContext("2d");
-var speed = 500;
-var conf = {
+const conf = {
   w: 20,
-  h: 20
+  h: 20,
+  x: 100,
+  y: 0,
+  speed: 1000,
+  wa: area.width,
+  ha: area.height
 };
+var xyCoords = [];
+var yCoords = [];
 var items = [];
-var itemsCoords = [];
-var w = 20;
-var h = 20;
-var wa = area.width;
-var ha = area.height;
+// var w = 20;
+// var h = 20;
+
 // var blocks = {
 //   rect: {
 //     item: (function() {
@@ -62,54 +67,80 @@ var ha = area.height;
 //     })()
 // };
 
+
+
+
+function Params(type) {
+  
+  return params[type];
+}
+
 function Item(type) {
-  this.params = (function() {
-    var params = {
-      rect: {
-        color: 'rgba(0, 0, 200, 0.5)',
-        state: 'new'
-      }
-    };
-    return params[type];
-  })();
-  this.coords = (function() {
-    // var item = [];
-    var x = 100;
-    var y = 0;
-    var w = conf.w;
-    var h = conf.h;
-    // console.info(items, this.items);
-    var coords = {
-      rect: [
+  var params = {
+    rect: {
+      color: 'rgba(0, 0, 200, 0.5)',
+      state: 'new'
+    }
+  };
+
+  var x = conf.x;
+  var y = conf.y;
+  var w = conf.w;
+  var h = conf.h;
+  var id = sid();
+  var state = 'new';
+  // console.info(items, this.items);
+  var coords = {
+    rect: {
+      id: id,
+      color: params[type].color,
+      state: params[type].state,
+      near: false,
+      xmin: x - w,
+      xmax: x,
+      ymin: y,
+      ymax: y + h,
+      xs: [x, x - w],
+      ys: [y, y + h],
+      coords: [
         {
           x: x - w,
-          y: y
+          y: y,
+          w: w,
+          h: h
         },
         {
           x: x,
-          y: y
+          y: y,
+          w: w,
+          h: h
         },
         {
           x: x - w,
-          y: y + h
+          y: y + h,
+          w: w,
+          h: h
         },
         {
           x: x,
-          y: y + h
+          y: y + h,
+          w: w,
+          h: h
         }
       ]
-    };
-    
-    
-    return coords[type];
-  })();
+    }
+  };
+  xyCoords = xyCoords.concat([{x: x, y: y}, {x: x - w, y: y}, {x: x - w, y: y + h}, {x: x, y: y + h}]);
+  // yCoords = yCoords.concat([y, y + h]);
+  return coords[type];
 }
 
 
 
 
 
-items.push(new Item('rect'));
+// items = items.push(Item('rect'));
+
 // itemsCoords.push(blocks['rect'].coords);
 
 // var x = 0,
@@ -133,33 +164,77 @@ items.push(new Item('rect'));
 // KeyUp();
 
 function Update() {
-  var w = conf.w;
-  var h = conf.h;
-  var newItem = false;
-  for (var i = 0; i < items.length; i++) {
-    console.info(newItem, items[i].params.state);
-    if (items[i].coords[0].y + h * 2 < ha && items[i].params.state === 'new') {
-      // item[0].y += h * 2;
-      for (var j = 0; j < items[i].coords.length; j++) {
-        var item = items[i].coords[j];
-        item.y += h;
+  // var w = conf.w;
+  // var h = conf.h;
+  if (items.length) {
+    var newItem = false;
+    var itemNear = false;
+    for (var i = 0; i < items.length; i++) {
+      // console.info(newItem, items[i].params.state);
+      var item = items[i];
+      var id = item.id;
+      
+      // for (var j = 0; j < item.coords.length; j++) {
+      //   var x = item.coords[j].x;
+      //   var y = item.coords[j].y;
+      //   var w = item.coords[j].w;
+      //   var h = item.coords[j].h;
+      //   if (y + h >= conf.ha && item.state === 'new') {
+      //     newItem = true;
+      //     item.state = 'old';
+      //   }
+      // }
+
+
+
+      for (var j = 0; j < item.coords.length; j++) {
+        if (xyCoords.indexOf({x: item.coords[j].x, y: item.coords[j].y + conf.h}) > -1) {
+          item.near = true;
+        }
+        // var x = item.coords[j].x;
+        // var y = item.coords[j].y;
+        // var w = item.coords[j].w;
+        // var h = item.coords[j].h;
+        // item.coords[j].y += conf.h;
+        // xCoords.push(item.coords[j].x);
+        // yCoords.push(item.coords[j].y);
       }
-    } else if (items[i].coords[0].y + h * 2 >= ha && items[i].params.state === 'new') {
-      newItem = true;
-      items[i].params.state = 'old';
+
+      console.info(item.ymax, item.near, item.state, item.id);
+
+      if (item.state === 'new' && item.ymax < conf.ha && !item.near) {
+        
+        item.ymax += conf.h;
+        for (var j = 0; j < item.coords.length; j++) {
+          // var x = item.coords[j].x;
+          // var y = item.coords[j].y;
+          // var w = item.coords[j].w;
+          // var h = item.coords[j].h;
+          xyCoords.splice(xyCoords.indexOf({x: item.coords[j].x, y: item.coords[j].y}), 1);
+          item.coords[j].y += conf.h;
+          xyCoords.push({x: item.coords[j].x, y: item.coords[j].y});
+          // yCoords.push(item.coords[j].y);
+        }
+      } else if (item.state === 'new' && (item.ymax >= conf.ha || item.near)) {
+        newItem = true;
+        item.state = 'old';
+      }
     }
+    if (newItem) {
+      items.push(Item('rect'));
+      newItem = false;
+    }
+  } else {
+    items.push(Item('rect'));
   }
-  if (newItem) {
-    
-    items.push(new Item('rect'));
-    newItem = false;
-  }
+  
   // console.info(newItem);
 }
 
 function Draw(move) {
-  var w = conf.w;
-  var h = conf.h;
+  // var w = conf.w;
+  // var h = conf.h;
+  move = typeof move === 'undefined' ? false : move;
   // console.info(move);
   if (move) {
     Update();
@@ -191,41 +266,73 @@ function Draw(move) {
     
     // var ctx = area.getContext("2d");
 
-    ctx.clearRect(0, 0, area.width, area.height);
-    
-    for (var i = 0; i < items.length; i++) {
-      
-      for (var j = 0; j < items[i].coords.length; j++) {
-        var coords = items[i].coords[j];
-        var params = items[i].params;
-        var x = coords.x;
-        var y = coords.y;
-        // var item = blocks[items[i].type].get();
-        // console.info(item, x, y, w, h);
-        // blocks[item.type].draw(item.x, item.y, item.w, item.h);
-        ctx.fillStyle = params.color;
-        ctx.fillRect (x, y, w, h);
+  ctx.clearRect(0, 0, area.width, area.height);
+  Grid();
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    // var coords = items[i].coords[j];
+    // var params = items[i].params;
+    var id = item.id;
+    // console.info(item);
+    for (var j = 0; j < item.coords.length; j++) {
+      var x = item.coords[j].x;
+      var y = item.coords[j].y;
+      var w = item.coords[j].w;
+      var h = item.coords[j].h;
+      // var item = blocks[items[i].type].get();
+      // console.info(item, x, y, w, h);
+      // blocks[item.type].draw(item.x, item.y, item.w, item.h);
+      ctx.fillStyle = item.color;
+      ctx.fillRect (x, y, w, h);
 
-        ctx.beginPath();
-        ctx.lineWidth = 0.1;
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + w, y);
-        ctx.lineTo(x + w, y + h);
-        ctx.lineTo(x, y + h);
-        ctx.lineTo(x, y);
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.lineWidth = 0.1;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.lineTo(x, y);
+      ctx.stroke();
     }
+  }
+  // }
+}
+
+function Grid(move) {
+  // var w = conf.w;
+  // var h = conf.h;
+  move = typeof move === 'undefined' ? false : move;
+  // console.info(move);
+  if (move) {
+    Update();
+  }
+
+  ctx.clearRect(0, 0, area.width, area.height);
+  
+  for (var i = 0; i < conf.wa; i = i + conf.w) {
+    
+    for (var j = 0; j < conf.ha; j = j + conf.h) {
+      ctx.beginPath();
+      ctx.lineWidth = 0.1;
+      ctx.moveTo(i, j);
+      ctx.lineTo(i + conf.w, j);
+      ctx.lineTo(i + conf.w, j + conf.h);
+      ctx.lineTo(i, j + conf.h);
+      // ctx.lineTo(i, j);
+      ctx.stroke();
+    }
+  }
   // }
 }
 
 function Go() {
   clearTimeout(t);
-  // Draw(true);
+  Draw(true);
+  debugItems.html(items.length);
+  debugXY.html(xyCoords.length);
   t = setTimeout(function() {
-    Draw(true);
     Go();
-  }, speed);
+  }, conf.speed);
 }
 
 $(document).ready(function(){
@@ -235,11 +342,11 @@ $(document).ready(function(){
 
   
 
-    
+  // Grid();
   // }
   // NewEl();
   // Next();
-  Draw();
+  // Draw();
   Go();
   // $('button').click(function(){
   //   switch($(this).attr('act')){
@@ -1157,7 +1264,38 @@ function Rand(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function sid() {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
+  for( var i=0; i < 5; i++ )
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}
+
+// ​Array.prototype.diff = function(arr2) {
+//     var ret = [];
+//     for(i in this) {
+//         if(arr2.indexOf( this[i] ) > -1){
+//             ret.push( this[i] );
+//         }
+//     }
+//     return ret;
+// };
+
+Object.defineProperty(Array, 'diff', {
+  enumerable: false,
+  get: function(arr2) {
+    var ret = [];
+    for(i in this) {
+      if(arr2.indexOf( this[i] ) > -1){
+        ret.push( this[i] );
+      }
+    }
+    return ret;
+  }
+});
 
 
 
